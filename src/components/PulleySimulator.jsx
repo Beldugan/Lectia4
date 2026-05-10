@@ -101,10 +101,10 @@ function Mode2SVG({ objectY, handleY, onPointerDown, dragging }) {
 
       {/* Rope 1: anchor → left of movable pulley */}
       <line x1={AX} y1={AY} x2={MX - MR} y2={MY} stroke="#92400E" strokeWidth={3} strokeLinecap="round" />
-      {/* Rope 2: right of movable → bottom of fixed */}
-      <line x1={MX + MR} y1={MY} x2={FX} y2={FY + FR} stroke="#92400E" strokeWidth={3} strokeLinecap="round" />
-      {/* Rope 3: pull side (fixed → handle going DOWN) */}
-      <line x1={PULL_X} y1={FY} x2={PULL_X} y2={handleY} stroke="#92400E" strokeWidth={3} strokeLinecap="round" />
+      {/* Rope 2: right of movable → LEFT side of fixed (rope trece pe DEASUPRA scripetui fix) */}
+      <line x1={MX + MR} y1={MY} x2={FX - FR} y2={FY} stroke="#92400E" strokeWidth={3} strokeLinecap="round" />
+      {/* Rope 3: RIGHT side of fixed → handle going DOWN */}
+      <line x1={FX + FR} y1={FY} x2={FX + FR} y2={handleY} stroke="#92400E" strokeWidth={3} strokeLinecap="round" />
       {/* Rope 4: movable pulley → weight box (vertical connection) */}
       <line x1={MX} y1={MY + MR} x2={MX} y2={objectY} stroke="#92400E" strokeWidth={3} strokeLinecap="round" />
 
@@ -113,36 +113,38 @@ function Mode2SVG({ objectY, handleY, onPointerDown, dragging }) {
       <text x={MX} y={MY + MR + 14} textAnchor="middle" fontSize={9} fill="#3B82F6" fontWeight="600">mobil</text>
 
       <WeightBox cx={MX} y={objectY} label={`${WEIGHT_N} N`} />
-      <DragHandle cx={PULL_X} cy={handleY} onPointerDown={onPointerDown} dragging={dragging} />
+      <DragHandle cx={FX + FR} cy={handleY} onPointerDown={onPointerDown} dragging={dragging} />
       <rect x={60} y={GROUND_Y} width={280} height={8} rx={4} fill="#D1D5DB" />
     </g>
   );
 }
 
 // ── Mode 4: 2 fixed + 2 movable pulleys ──────────────────────────────────────
+// Sfoara: ancoră → sub M1 → deasupra F1 → sub M2 → deasupra F2 → trage în jos
 function Mode4SVG({ objectY, handleY, onPointerDown, dragging }) {
   const FR = 17;
   const F1X = 185, F1Y = 58;
-  const F2X = 265, F2Y = 58;
+  const F2X = 268, F2Y = 58;
   const MR = 14;
-  const M1X = 115, M2X = 175;
+  // M2X trebuie > F1X + FR (202) ca sfoara să meargă dreapta-jos de la F1 la M2
+  const M1X = 112, M2X = 220;
   const M1Y = objectY - MR - 8;
   const M2Y = objectY - MR - 8;
-  const AX = 75, AY = 28;
-  const PULL_X = F2X + FR + 6;
+  const AX = 72, AY = 28;
+  const PULL_X = F2X + FR; // sfoara iese din dreapta F2
 
   return (
     <g>
-      <rect x={50} y={18} width={310} height={12} rx={6} fill="#374151" />
+      <rect x={48} y={18} width={318} height={12} rx={6} fill="#374151" />
       {/* Anchor */}
       <circle cx={AX} cy={AY} r={5} fill="#374151" />
       <text x={AX} y={AY - 9} textAnchor="middle" fontSize={9} fill="#6B7280">ancoră</text>
 
-      {/* Ropes */}
+      {/* Ropes — fiecare trece pe STÂNGA scripetui fix și iese pe DREAPTA */}
       <line x1={AX} y1={AY} x2={M1X - MR} y2={M1Y} stroke="#92400E" strokeWidth={2.5} strokeLinecap="round" />
-      <line x1={M1X + MR} y1={M1Y} x2={F1X} y2={F1Y + FR} stroke="#92400E" strokeWidth={2.5} strokeLinecap="round" />
+      <line x1={M1X + MR} y1={M1Y} x2={F1X - FR} y2={F1Y} stroke="#92400E" strokeWidth={2.5} strokeLinecap="round" />
       <line x1={F1X + FR} y1={F1Y} x2={M2X - MR} y2={M2Y} stroke="#92400E" strokeWidth={2.5} strokeLinecap="round" />
-      <line x1={M2X + MR} y1={M2Y} x2={F2X} y2={F2Y + FR} stroke="#92400E" strokeWidth={2.5} strokeLinecap="round" />
+      <line x1={M2X + MR} y1={M2Y} x2={F2X - FR} y2={F2Y} stroke="#92400E" strokeWidth={2.5} strokeLinecap="round" />
       <line x1={PULL_X} y1={F2Y} x2={PULL_X} y2={handleY} stroke="#92400E" strokeWidth={2.5} strokeLinecap="round" />
       {/* Vertical connections from movable pulleys to weight */}
       <line x1={M1X} y1={M1Y + MR} x2={M1X} y2={objectY} stroke="#92400E" strokeWidth={2.5} strokeLinecap="round" />
