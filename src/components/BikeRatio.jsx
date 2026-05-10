@@ -9,8 +9,9 @@ const SPEEDS = [
 
 const WHEEL_CIRCUM = 2;
 
+// Gear path built around (cx, cy) — rotated via SVG transform
 function buildGearPath(cx, cy, r, teeth) {
-  const toothH = r * 0.2;
+  const toothH = r * 0.22;
   const toothW = 0.55;
   const totalPoints = teeth * 4;
   const points = [];
@@ -25,61 +26,51 @@ function buildGearPath(cx, cy, r, teeth) {
   return `M ${points.map(p => p.join(',')).join(' L ')} Z`;
 }
 
-function ChainDot({ progress, x1, y1, x2, y2, r1, r2 }) {
-  const totalLen = (x2 - x1) * 2 + Math.PI * (r1 + r2);
-  const topLen = x2 - x1;
-  const t = progress % 1;
-  const dist = t * totalLen;
-
-  let x, y;
-  if (dist < topLen) {
-    x = x1 + dist;
-    y = y1 - r1;
-  } else if (dist < topLen + Math.PI * r2) {
-    const a = ((dist - topLen) / r2) - Math.PI / 2;
-    x = x2 + Math.cos(a) * r2;
-    y = y2 + Math.sin(a) * r2;
-  } else if (dist < topLen * 2 + Math.PI * r2) {
-    const d2 = dist - topLen - Math.PI * r2;
-    x = x2 - d2;
-    y = y2 + r2;
-  } else {
-    const d3 = dist - topLen * 2 - Math.PI * r2;
-    const a = Math.PI + (d3 / r1) - Math.PI / 2;
-    x = x1 + Math.cos(a) * r1;
-    y = y1 + Math.sin(a) * r1;
-  }
-  return <circle cx={x} cy={y} r={4} fill="#78350F" opacity="0.85" />;
-}
-
 export default function BikeRatio() {
   const [speedIdx, setSpeedIdx] = useState(1);
-  const [pedalRot, setPedalRot] = useState(0);
   const [pedals, setPedals] = useState(1);
-  const [chainOffset, setChainOffset] = useState(0);
+  const [pedalRot, setPedalRot] = useState(0);
+  const [dashOffset, setDashOffset] = useState(0);
   const rafRef = useRef(null);
   const lastRef = useRef(null);
-  const rotRef = useRef(0);
+  const pedalAccRef = useRef(0);
 
   const speed = SPEEDS[speedIdx];
   const rearRotations = pedals * speed.ratio;
   const distance = (rearRotations * WHEEL_CIRCUM).toFixed(1);
 
-  const rSmall = 32;
-  const rLarge = rSmall * speed.ratio * 0.5 + 20;
-  const rLargeCapped = Math.min(rLarge, 62);
+  const rSmall = 30;
+  // Rear sprocket: physically larger for lower gears (more teeth = more force advantage)
+  const rLarge = Math.min(24 + speed.ratio * 6, 58);
 
-  const cx1 = 90, cy1 = 160;
-  const cx2 = 300, cy2 = 160;
+  const cx1 = 100, cy1 = 160; // front (pedal) sprocket
+  const cx2 = 310, cy2 = 160; // rear sprocket
+
+  // Chain path: approximate external tangent
+  const dy_top = (cy2 - rLarge) - (cy1 - rSmall); // negative = right top is higher
+  const dy_bot = (cy2 + rLarge) - (cy1 + rSmall);
+  const chainPath = [
+    `M ${cx1} ${cy1 - rSmall}`,
+    `L ${cx2} ${cy2 - rLarge}`,
+    `A ${rLarge} ${rLarge} 0 0 1 ${cx2} ${cy2 + rLarge}`,
+    `L ${cx1} ${cy1 + rSmall}`,
+    `A ${rSmall} ${rSmall} 0 0 1 ${cx1} ${cy1 - rSmall}`,
+    'Z',
+  ].join(' ');
+
+  // Approximate chain circumference for dash animation
+  const topLen = Math.sqrt((cx2 - cx1) ** 2 + dy_top ** 2);
+  const botLen = Math.sqrt((cx2 - cx1) ** 2 + dy_bot ** 2);
+  const chainLen = topLen + botLen + Math.PI * rLarge + Math.PI * rSmall;
 
   useEffect(() => {
     const animate = (ts) => {
       if (!lastRef.current) lastRef.current = ts;
       const dt = (ts - lastRef.current) / 1000;
       lastRef.current = ts;
-      rotRef.current += 60 * dt;
-      setPedalRot(rotRef.current % 360);
-      setChainOffset(o => (o + dt * 0.25) % 1);
+      pedalAccRef.current = (pedalAccRef.current + 60 * dt) % 360;
+      setPedalRot(pedalAccRef.current);
+      setDashOffset(prev => prev - dt * 80);
       rafRef.current = requestAnimationFrame(animate);
     };
     rafRef.current = requestAnimationFrame(animate);
@@ -88,17 +79,16 @@ export default function BikeRatio() {
 
   const rearDeg = pedalRot * speed.ratio;
 
-  const CHAIN_DOTS = 12;
+  const handleSpeedChange = (i) => {
+    setSpeedIdx(i);
+    pedalAccRef.current = 0;
+    setPedalRot(0);
+    setDashOffset(0);
+  };
 
   return (
     <div>
-      <div style={{
-        backgroundColor: 'white',
-        borderRadius: '16px',
-        padding: '28px',
-        boxShadow: '0 2px 12px rgba(0,0,0,0.08)',
-        marginBottom: '24px',
-      }}>
+      <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '28px', boxShadow: '0 2px 12px rgba(0,0,0,0.08)', marginBottom: '24px' }}>
         <h2 style={{ fontSize: '22px', fontWeight: '700', color: '#1F2937', marginBottom: '6px' }}>
           🚲 Bicicleta — De ce sunt vitezele utile?
         </h2>
@@ -107,61 +97,53 @@ export default function BikeRatio() {
         </p>
 
         <div style={{ display: 'flex', gap: '32px', flexWrap: 'wrap', alignItems: 'flex-start' }}>
-          {/* SVG animation */}
+          {/* SVG */}
           <div style={{ flex: '0 0 auto' }}>
-            <svg width="420" height="280" style={{ border: '2px solid #E5E7EB', borderRadius: '12px', background: '#F9FAFB' }}>
+            <svg width="430" height="300" style={{ border: '2px solid #E5E7EB', borderRadius: '12px', background: '#F9FAFB' }}>
               {/* Ground */}
-              <rect x="40" y="230" width="340" height="8" rx="4" fill="#D1D5DB" />
+              <rect x="40" y="260" width="350" height="8" rx="4" fill="#D1D5DB" />
 
-              {/* Chain - background lines */}
-              <line x1={cx1} y1={cy1 - rSmall} x2={cx2} y2={cy2 - rLargeCapped} stroke="#92400E" strokeWidth="6" opacity="0.3" />
-              <line x1={cx1} y1={cy1 + rSmall} x2={cx2} y2={cy2 + rLargeCapped} stroke="#92400E" strokeWidth="6" opacity="0.3" />
+              {/* Chain background (thick outline) */}
+              <path d={chainPath} fill="none" stroke="#D97706" strokeWidth={8} opacity="0.25" />
 
-              {/* Chain dots */}
-              {Array.from({ length: CHAIN_DOTS }, (_, i) => (
-                <ChainDot
-                  key={i}
-                  progress={(chainOffset + i / CHAIN_DOTS) % 1}
-                  x1={cx1} y1={cy1}
-                  x2={cx2} y2={cy2}
-                  r1={rSmall} r2={rLargeCapped}
-                />
-              ))}
+              {/* Chain animated (dashes moving) */}
+              <path
+                d={chainPath}
+                fill="none"
+                stroke="#78350F"
+                strokeWidth={5}
+                strokeDasharray="10 6"
+                strokeDashoffset={dashOffset}
+              />
 
-              {/* Rear gear (large) */}
-              <motion.g style={{ originX: `${cx2}px`, originY: `${cy2}px` }}
-                animate={{ rotate: rearDeg }}
-                transition={{ duration: 0, ease: 'linear' }}>
-                <path d={buildGearPath(cx2, cy2, rLargeCapped, 18)} fill="#10B981" opacity="0.85" />
-                <circle cx={cx2} cy={cy2} r={rLargeCapped * 0.38} fill="white" opacity="0.9" />
-                <circle cx={cx2} cy={cy2} r={rLargeCapped * 0.12} fill="#065F46" />
-              </motion.g>
+              {/* Rear sprocket (large, green) */}
+              <g transform={`rotate(${rearDeg}, ${cx2}, ${cy2})`}>
+                <path d={buildGearPath(cx2, cy2, rLarge, 16)} fill="#10B981" opacity="0.9" />
+                <circle cx={cx2} cy={cy2} r={rLarge * 0.38} fill="white" opacity="0.9" />
+                <circle cx={cx2} cy={cy2} r={rLarge * 0.13} fill="#065F46" />
+                <line x1={cx2 - rLarge * 0.3} y1={cy2} x2={cx2 + rLarge * 0.3} y2={cy2} stroke="#065F46" strokeWidth="3" opacity="0.5" />
+                <line x1={cx2} y1={cy2 - rLarge * 0.3} x2={cx2} y2={cy2 + rLarge * 0.3} stroke="#065F46" strokeWidth="3" opacity="0.5" />
+              </g>
 
-              {/* Pedal gear (small) */}
-              <motion.g style={{ originX: `${cx1}px`, originY: `${cy1}px` }}
-                animate={{ rotate: pedalRot }}
-                transition={{ duration: 0, ease: 'linear' }}>
+              {/* Front sprocket (small, purple) with pedal arm */}
+              <g transform={`rotate(${pedalRot}, ${cx1}, ${cy1})`}>
                 <path d={buildGearPath(cx1, cy1, rSmall, 10)} fill="#8B5CF6" opacity="0.9" />
                 <circle cx={cx1} cy={cy1} r={rSmall * 0.38} fill="white" opacity="0.9" />
                 <circle cx={cx1} cy={cy1} r={rSmall * 0.14} fill="#6D28D9" />
-                {/* Pedal arm */}
-                <line x1={cx1} y1={cy1} x2={cx1 + rSmall * 0.7 * Math.cos((pedalRot * Math.PI) / 180)} y2={cy1 + rSmall * 0.7 * Math.sin((pedalRot * Math.PI) / 180)} stroke="#6D28D9" strokeWidth="4" />
-                <circle cx={cx1 + rSmall * 0.7 * Math.cos((pedalRot * Math.PI) / 180)} cy={cy1 + rSmall * 0.7 * Math.sin((pedalRot * Math.PI) / 180)} r={5} fill="#374151" />
-              </motion.g>
+                {/* Pedal arm (relative to center, rotates with group) */}
+                <line x1={cx1} y1={cy1} x2={cx1 + rSmall * 0.75} y2={cy1} stroke="#6D28D9" strokeWidth="4" strokeLinecap="round" />
+                <circle cx={cx1 + rSmall * 0.75} cy={cy1} r={5} fill="#1F2937" />
+                <line x1={cx1} y1={cy1} x2={cx1 - rSmall * 0.75} y2={cy1} stroke="#6D28D9" strokeWidth="4" strokeLinecap="round" />
+                <circle cx={cx1 - rSmall * 0.75} cy={cy1} r={5} fill="#1F2937" />
+              </g>
 
               {/* Labels */}
-              <text x={cx1} y={cy1 + rSmall + 22} textAnchor="middle" fontSize="12" fill="#6B7280" fontWeight="600">pedale</text>
-              <text x={cx1} y={cy1 + rSmall + 36} textAnchor="middle" fontSize="11" fill="#8B5CF6">(mică)</text>
-              <text x={cx2} y={cy2 + rLargeCapped + 22} textAnchor="middle" fontSize="12" fill="#6B7280" fontWeight="600">roata spate</text>
-              <text x={cx2} y={cy2 + rLargeCapped + 36} textAnchor="middle" fontSize="11" fill="#10B981">(mare)</text>
+              <text x={cx1} y={cy1 + rSmall + 22} textAnchor="middle" fontSize="12" fill="#6B7280" fontWeight="600">pedale (mică)</text>
+              <text x={cx2} y={cy2 + rLarge + 22} textAnchor="middle" fontSize="12" fill="#6B7280" fontWeight="600">roata spate (mare)</text>
 
-              {/* Rotation indicators */}
-              <text x={cx1} y={cy1 - rSmall - 14} textAnchor="middle" fontSize="11" fill="#8B5CF6" fontWeight="700">
-                ×1
-              </text>
-              <text x={cx2} y={cy2 - rLargeCapped - 14} textAnchor="middle" fontSize="11" fill="#10B981" fontWeight="700">
-                ×{speed.ratio}
-              </text>
+              {/* Rotation speed labels */}
+              <text x={cx1} y={cy1 - rSmall - 14} textAnchor="middle" fontSize="12" fill="#8B5CF6" fontWeight="700">×1</text>
+              <text x={cx2} y={cy2 - rLarge - 14} textAnchor="middle" fontSize="12" fill="#10B981" fontWeight="700">×{speed.ratio}</text>
             </svg>
           </div>
 
@@ -173,19 +155,14 @@ export default function BikeRatio() {
             {SPEEDS.map((s, i) => (
               <motion.button
                 key={s.id}
-                onClick={() => setSpeedIdx(i)}
+                onClick={() => handleSpeedChange(i)}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 style={{
-                  display: 'block',
-                  width: '100%',
-                  textAlign: 'left',
-                  padding: '12px 16px',
-                  marginBottom: '10px',
-                  borderRadius: '12px',
+                  display: 'block', width: '100%', textAlign: 'left',
+                  padding: '12px 16px', marginBottom: '10px', borderRadius: '12px',
                   border: speedIdx === i ? `2px solid ${s.color}` : '2px solid #E5E7EB',
-                  backgroundColor: speedIdx === i ? `${s.color}15` : 'white',
-                  cursor: 'pointer',
+                  backgroundColor: speedIdx === i ? `${s.color}15` : 'white', cursor: 'pointer',
                 }}
               >
                 <div style={{ fontWeight: '600', fontSize: '15px', color: speedIdx === i ? s.color : '#1F2937' }}>
@@ -197,26 +174,15 @@ export default function BikeRatio() {
               </motion.button>
             ))}
 
-            {/* Pedal slider */}
             <div style={{ marginBottom: '16px' }}>
               <label style={{ fontSize: '14px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '8px' }}>
                 Tu pedalezi: <span style={{ color: '#8B5CF6' }}>{pedals} rotații</span>
               </label>
-              <input
-                type="range" min="0" max="5" step="0.5" value={pedals}
-                onChange={e => setPedals(Number(e.target.value))}
-                style={{ width: '100%' }}
-              />
+              <input type="range" min="0" max="5" step="0.5" value={pedals}
+                onChange={e => setPedals(Number(e.target.value))} style={{ width: '100%' }} />
             </div>
 
-            {/* Info box */}
-            <div style={{
-              backgroundColor: `${speed.color}15`,
-              border: `2px solid ${speed.color}`,
-              borderRadius: '12px',
-              padding: '14px',
-              marginBottom: '16px',
-            }}>
+            <div style={{ backgroundColor: `${speed.color}15`, border: `2px solid ${speed.color}`, borderRadius: '12px', padding: '14px', marginBottom: '16px' }}>
               <div style={{ fontSize: '15px', fontWeight: '700', color: speed.color, marginBottom: '6px' }}>
                 {speed.emoji} {speed.desc}
               </div>
@@ -227,30 +193,19 @@ export default function BikeRatio() {
               </div>
             </div>
 
-            <div style={{
-              backgroundColor: '#FFFBEB',
-              border: '2px solid #F59E0B',
-              borderRadius: '12px',
-              padding: '14px',
-            }}>
+            <div style={{ backgroundColor: '#FFFBEB', border: '2px solid #F59E0B', borderRadius: '12px', padding: '14px' }}>
               <p style={{ fontSize: '14px', color: '#92400E', lineHeight: '1.6' }}>
-                💡 La <strong>urcuș</strong> alegi viteză MICĂ → pedalezi mult dar cu efort puțin.
-                La <strong>coborâre</strong> alegi viteză MARE → fiecare pedalare = distanță mare!
+                💡 La <strong>urcuș</strong>: viteză mică → pedalezi ușor dar faci puțini metri.<br />
+                La <strong>coborâre</strong>: viteză mare → o pedalare = distanță mare!
               </p>
             </div>
           </div>
         </div>
       </div>
 
-      <div style={{
-        backgroundColor: '#EFF6FF',
-        borderRadius: '12px',
-        padding: '16px 20px',
-        borderLeft: '4px solid #3B82F6',
-      }}>
+      <div style={{ backgroundColor: '#EFF6FF', borderRadius: '12px', padding: '16px 20px', borderLeft: '4px solid #3B82F6' }}>
         <p style={{ fontSize: '15px', color: '#1D4ED8', fontWeight: '500' }}>
-          💡 <strong>Știai că?</strong> Angrenajele bicicletei funcționează exact ca roțile dințate din Modulul 1!
-          Roata mică a pedalelor pune în mișcare roata mare a spatelui.
+          💡 <strong>Știai că?</strong> Angrenajele bicicletei funcționează exact ca roțile dințate din Modulul 1 — roata mică a pedalelor pune în mișcare roata mare a spatelui prin lanț!
         </p>
       </div>
     </div>

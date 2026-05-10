@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { motion, useAnimation } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { Play, Pause, RotateCcw } from 'lucide-react';
 
 function buildGearPath(cx, cy, r, teeth, toothHeight, toothWidth) {
@@ -21,19 +21,17 @@ function Gear({ cx, cy, radius, teeth, color, rotationDeg, label, direction }) {
   const toothW = 0.6;
   const path = buildGearPath(cx, cy, radius, teeth, toothH, toothW);
 
+  const rot = direction === 'cw' ? rotationDeg : -rotationDeg;
+
   return (
     <g>
-      <motion.g
-        style={{ originX: `${cx}px`, originY: `${cy}px` }}
-        animate={{ rotate: direction === 'cw' ? rotationDeg : -rotationDeg }}
-        transition={{ duration: 0, ease: 'linear' }}
-      >
+      <g transform={`rotate(${rot}, ${cx}, ${cy})`}>
         <path d={path} fill={color} opacity="0.9" />
         <circle cx={cx} cy={cy} r={radius * 0.35} fill="white" opacity="0.9" />
         <circle cx={cx} cy={cy} r={radius * 0.12} fill={color} />
         <line x1={cx - radius * 0.28} y1={cy} x2={cx + radius * 0.28} y2={cy} stroke={color} strokeWidth="3" opacity="0.5" />
         <line x1={cx} y1={cy - radius * 0.28} x2={cx} y2={cy + radius * 0.28} stroke={color} strokeWidth="3" opacity="0.5" />
-      </motion.g>
+      </g>
       <text x={cx} y={cy + radius + toothH + 18} textAnchor="middle" fontSize="13" fill="#6B7280" fontWeight="500">
         {label}
       </text>
