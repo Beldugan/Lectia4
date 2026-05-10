@@ -22,8 +22,8 @@ const concepts = [
     border: '#3B82F6',
     points: [
       'Schimbă DIRECȚIA forței (tragi jos → obiectul urcă)',
-      '2 scripete = jumătate din forță necesară',
-      '4 scripete = un sfert din forță necesară',
+      '2 scripeți = jumătate din forță necesară',
+      '4 scripeți = un sfert din forță necesară',
       'Exemplu real: macaraua de construcții',
     ],
   },

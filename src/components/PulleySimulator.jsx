@@ -17,8 +17,8 @@ const INIT_OBJ_Y = GROUND_Y - BOX_H; // 340
 
 const MODES = [
   { id: 1, label: '1 scripete', sub: 'Schimbă direcția — aceeași forță', factor: 1 },
-  { id: 2, label: '2 scripete', sub: 'Jumătate din forța necesară', factor: 2 },
-  { id: 4, label: '4 scripete', sub: 'Un sfert din forța necesară', factor: 4 },
+  { id: 2, label: '2 scripeți', sub: 'Jumătate din forța necesară', factor: 2 },
+  { id: 4, label: '4 scripeți', sub: 'Un sfert din forța necesară', factor: 4 },
 ];
 
 function FixedPulley({ cx, cy, r, label }) {
@@ -231,7 +231,7 @@ export default function PulleySimulator() {
           🪣 Scripete — Trage sfoara, ridică obiectul!
         </h2>
         <p style={{ color: '#6B7280', fontSize: '15px', marginBottom: '24px' }}>
-          Trage <strong>butonul albastru ÎN JOS</strong> → obiectul se ridică în SUS. Mai multe scripete = mai puțină forță!
+          Trage <strong>butonul albastru ÎN JOS</strong> → obiectul se ridică în SUS. Mai mulți scripeți = mai puțină forță!
         </p>
 
         <div style={{ display: 'flex', gap: '32px', flexWrap: 'wrap', alignItems: 'flex-start' }}>
@@ -288,7 +288,7 @@ export default function PulleySimulator() {
                 💪 Forță necesară: <span style={{ fontSize: '20px', fontFamily: 'monospace' }}>{forceN} N</span>
               </div>
               <div style={{ fontSize: '14px', color: '#047857' }}>Greutate obiect: {WEIGHT_N} N</div>
-              <div style={{ fontSize: '14px', color: '#047857' }}>{mode} scripete → forță ÷ {mode}</div>
+              <div style={{ fontSize: '14px', color: '#047857' }}>{mode} {mode === 1 ? 'scripete' : 'scripeți'} → forță ÷ {mode}</div>
             </div>
 
             <div style={{ backgroundColor: '#F5F3FF', borderRadius: '12px', padding: '14px', marginBottom: '16px' }}>
@@ -330,7 +330,7 @@ export default function PulleySimulator() {
 
       <div style={{ backgroundColor: '#EFF6FF', borderRadius: '12px', padding: '16px 20px', borderLeft: '4px solid #3B82F6' }}>
         <p style={{ fontSize: '15px', color: '#1D4ED8', fontWeight: '500' }}>
-          💡 <strong>Exemplu real:</strong> Macaraua de construcții folosește mai multe scripete ca să ridice greutăți mari cu efort mic!
+          💡 <strong>Exemplu real:</strong> Macaraua de construcții folosește mai mulți scripeți ca să ridice greutăți mari cu efort mic!
         </p>
       </div>
     </div>
